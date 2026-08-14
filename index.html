@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ตารางการแข่งขัน | Korat Robot &amp; AI Challenge 2026</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<style>
+:root{
+  --bg:#eef1f6; --card:#fff; --ink:#111827; --ink-2:#4b5563; --ink-3:#9ca3af;
+  --line:#e2e6ee; --navy:#0b2545; --navy-2:#13315c; --accent:#1d4ed8;
+  --win:#0f9d58; --win-bg:#e7f6ee; --draw:#b45309; --draw-bg:#fdf3e3;
+  --loss:#9ca3af; --loss-bg:#f3f4f6; --live:#dc2626;
+  --gA:#2563eb; --gB:#7c3aed; --gC:#0891b2; --gD:#ea580c;
+  --radius:14px; --shadow:0 1px 2px rgba(16,24,40,.05),0 6px 18px -8px rgba(16,24,40,.18);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:"Noto Sans Thai","Sarabun","Leelawadee UI",-apple-system,"Segoe UI",Tahoma,sans-serif;font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1200px;margin:0 auto;padding:0 18px}
+
+header.hero{background:linear-gradient(135deg,var(--navy),var(--navy-2) 55%,#1e4a86);color:#fff;padding:18px 0;position:relative;overflow:hidden}
+header.hero::after{content:"";position:absolute;right:-70px;top:-70px;width:280px;height:280px;border-radius:50%;background:rgba(255,255,255,.05)}
+.hero-top{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between}
+.hero h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.3px}
+.titlebox{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.modebadge{font-size:11.5px;font-weight:700;padding:5px 12px;border-radius:99px;letter-spacing:.2px;white-space:nowrap}
+.modebadge.admin{background:rgba(74,222,128,.2);color:#bbf7d0;border:1px solid rgba(74,222,128,.45)}
+.modebadge.view{background:rgba(255,255,255,.13);color:#cfe0f5;border:1px solid rgba(255,255,255,.22)}
+.cloudbadge{font-size:11.5px;font-weight:600;padding:5px 12px 5px 24px;border-radius:99px;white-space:nowrap;position:relative;background:rgba(255,255,255,.1);color:#cfe0f5;border:1px solid rgba(255,255,255,.18)}
+.cloudbadge::before{content:"";position:absolute;left:10px;top:50%;transform:translateY(-50%);width:7px;height:7px;border-radius:50%;background:#94a3b8}
+.cloudbadge.live::before{background:#4ade80;box-shadow:0 0 0 0 rgba(74,222,128,.7);animation:ping 2s infinite}
+.cloudbadge.wait::before{background:#fbbf24}
+.cloudbadge.down::before{background:#f87171}
+.cloudbadge.off::before{background:#94a3b8}
+@keyframes ping{70%{box-shadow:0 0 0 7px rgba(74,222,128,0)}100%{box-shadow:0 0 0 0 rgba(74,222,128,0)}}
+.adminbar{display:flex;align-items:center;gap:9px;margin-top:14px;padding-top:13px;border-top:1px solid rgba(255,255,255,.14);flex-wrap:wrap}
+.adminbar .ab-note{font-size:12px;color:#9fb6d4;margin-right:2px}
+.btn.ghost{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2);color:#e6eefb;font-size:12.5px;padding:6px 12px}
+.btn.ghost:hover{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.35);color:#fff}
+.btn.ghost.danger:hover{background:rgba(248,113,113,.25);border-color:rgba(248,113,113,.5);color:#fee2e2}
+.viewnote{background:#f8fafc;border:1px dashed #cbd5e1;color:var(--ink-3);border-radius:9px;padding:7px 12px;font-size:12.5px;margin-bottom:10px}
+.hero .sub{margin:5px 0 0;color:#b9cbe6;font-size:13px}
+.hero .sub b{color:#e6eefb;font-weight:600}
+.clockbox{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:9px 16px;text-align:right;min-width:168px}
+.clockbox .t{font-size:25px;font-weight:800;letter-spacing:1px;font-variant-numeric:tabular-nums}
+.clockbox .l{font-size:11.5px;color:#b9cbe6}
+.progress-row{margin-top:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.bar{flex:1;min-width:180px;height:7px;background:rgba(255,255,255,.16);border-radius:99px;overflow:hidden}
+.bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,#38bdf8,#4ade80);border-radius:99px;transition:width .35s}
+.progress-row .pct{font-size:13px;color:#cfe0f5;font-variant-numeric:tabular-nums;white-space:nowrap}
+.saveState{font-size:12px;padding:4px 11px;border-radius:99px;background:rgba(255,255,255,.12);color:#cfe0f5;white-space:nowrap;transition:.2s}
+.saveState.ok{background:rgba(74,222,128,.22);color:#bbf7d0}
+.saveState.bad{background:rgba(248,113,113,.25);color:#fecaca}
+
+nav.tabs{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:40;box-shadow:0 1px 3px rgba(16,24,40,.04)}
+.tabs-inner{display:flex;gap:4px;overflow-x:auto}
+.tab{appearance:none;background:none;border:0;border-bottom:3px solid transparent;padding:14px 16px;font:inherit;font-weight:600;color:var(--ink-2);cursor:pointer;white-space:nowrap}
+.tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+
+.toolbar{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:18px 0 12px}
+.chips{display:flex;gap:5px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:99px;padding:6px 13px;font:inherit;font-size:13px;color:var(--ink-2);cursor:pointer;transition:.15s}
+.chip.on{background:var(--navy);border-color:var(--navy);color:#fff;font-weight:600}
+.spacer{flex:1}
+.search{position:relative}
+.search input{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px 12px 8px 32px;font:inherit;font-size:13px;width:200px;outline:none}
+.search input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(29,78,216,.1)}
+.search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);opacity:.4}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px 12px;font:inherit;font-size:13px;color:var(--ink-2);cursor:pointer;display:inline-flex;gap:6px;align-items:center;white-space:nowrap}
+.btn:hover{border-color:#c3cbdb;color:var(--ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.btn.primary:hover{background:#1e40af;color:#fff}
+.btn.danger:hover{border-color:#fca5a5;color:#b91c1c}
+.switch{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2);cursor:pointer;user-select:none}
+.switch input{display:none}
+.switch .track{width:36px;height:20px;border-radius:99px;background:#cbd5e1;position:relative;transition:.2s}
+.switch .track::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.switch input:checked+.track{background:var(--win)}
+.switch input:checked+.track::after{transform:translateX(16px)}
+
+.round-head{display:flex;align-items:center;gap:11px;margin:24px 0 10px;flex-wrap:wrap}
+.round-head h2{margin:0;font-size:17px;font-weight:800}
+.round-head .en{font-size:12.5px;color:var(--ink-3)}
+.round-head .rule{flex:1;height:1px;background:var(--line);min-width:20px}
+.round-head .count{font-size:12.5px;color:var(--ink-3)}
+.formula{background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;padding:8px 13px;font-size:12.5px;color:var(--ink-2);margin-bottom:10px;display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.formula code{background:#0b2545;color:#e0f2fe;padding:3px 9px;border-radius:6px;font-size:12.5px;font-family:ui-monospace,Menlo,Consolas,monospace}
+
+.matches{display:flex;flex-direction:column;gap:8px}
+.match{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);transition:.18s;border-left:4px solid var(--line);overflow:hidden}
+.match:hover{border-color:#cfd6e4}
+.match.done{border-left-color:var(--win)}
+.match.draft{border-left-color:#f59e0b}
+.match.live{border-left-color:var(--live);box-shadow:0 0 0 3px rgba(220,38,38,.12),var(--shadow)}
+.match.dim{opacity:.32}
+.match.hit{background:#fffdf6}
+.mrow{padding:11px 15px;display:grid;grid-template-columns:100px 1fr 150px 1fr 108px;gap:12px;align-items:center;cursor:pointer}
+.m-meta{display:flex;flex-direction:column;gap:2px}
+.m-no{font-size:11.5px;font-weight:700;color:var(--ink-3);letter-spacing:.4px}
+.m-time{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums}
+.m-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:2px}
+.tag{font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:5px}
+.tag.arena{background:#eef2ff;color:#3730a3}
+.tag.g{color:#fff}
+.tag.gA{background:var(--gA)}.tag.gB{background:var(--gB)}.tag.gC{background:var(--gC)}.tag.gD{background:var(--gD)}
+.tag.live{background:var(--live);color:#fff;animation:pulse 1.6s infinite}
+@keyframes pulse{50%{opacity:.5}}
+.side{display:flex;align-items:center;gap:10px;min-width:0}
+.side.a{justify-content:flex-end;text-align:right}
+.code{flex:none;width:33px;height:33px;border-radius:9px;display:grid;place-items:center;font-size:12px;font-weight:800;color:#fff;background:var(--ink-3)}
+.code.A{background:var(--gA)}.code.B{background:var(--gB)}.code.C{background:var(--gC)}.code.D{background:var(--gD)}
+.code.tbd{background:#e5e7eb;color:#9ca3af;font-size:15px}
+.nm{min-width:0}
+.nm .school{font-weight:600;font-size:14px;line-height:1.3;overflow-wrap:anywhere}
+.nm .pend{color:var(--ink-3);font-style:italic;font-weight:500}
+.nm .res{font-size:11px;font-weight:700;margin-top:1px}
+.res.w{color:var(--win)}.res.d{color:var(--draw)}.res.l{color:var(--loss)}
+.side.won .school{color:var(--win)}
+.side.lost .school{color:var(--ink-3)}
+.m-score{display:flex;align-items:center;justify-content:center;gap:9px}
+.big{font-size:25px;font-weight:800;font-variant-numeric:tabular-nums;min-width:38px;text-align:center;color:var(--ink-3)}
+.big.w{color:var(--win)}.big.d{color:var(--draw)}
+.big.blank{font-size:19px;color:#d5d9e2}
+.vs{font-size:10.5px;font-weight:800;color:var(--ink-3);letter-spacing:1px}
+.m-status{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.pill{font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;white-space:nowrap}
+.pill.wait{background:var(--loss-bg);color:#6b7280}
+.pill.done{background:var(--win-bg);color:var(--win)}
+.pill.drawp{background:var(--draw-bg);color:var(--draw)}
+.pill.live{background:#fee2e2;color:var(--live)}
+.pill.warn{background:#fef3c7;color:#92400e}
+.m-status .hint{font-size:10.5px;color:var(--ink-3)}
+
+/* --- scoring sheet --- */
+.sheet-wrap{border-top:1px dashed var(--line);background:#fbfcfe;padding:14px 15px 15px}
+.sheet{width:100%;border-collapse:collapse;font-size:13.5px;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.sheet th,.sheet td{padding:7px 10px;border-bottom:1px solid #f1f3f7}
+.sheet thead th{background:#f6f8fb;font-size:12px;font-weight:700;color:var(--ink-2);text-align:center}
+.sheet thead th:first-child{text-align:left;width:38%}
+.sheet td:first-child{color:var(--ink-2)}
+.sheet td:not(:first-child){text-align:center;width:31%}
+.sheet tr:last-child td{border-bottom:0}
+.sheet tr.sum td{background:#f8fafc;font-weight:800}
+.sheet tr.net td{background:#eef6ff}
+.sheet tr.net td:not(:first-child){font-size:19px;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums}
+.wbadge{display:inline-block;background:#eef2ff;color:#3730a3;font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:5px;margin-left:6px}
+.cnt{width:66px;height:36px;border:1px solid var(--line);border-radius:8px;background:#f9fafb;text-align:center;font:inherit;font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;outline:none}
+.cnt:focus{border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px rgba(29,78,216,.1)}
+.cnt::selection{background:#bfdbfe}
+.cnt.pen:focus{border-color:#dc2626;box-shadow:0 0 0 3px rgba(220,38,38,.1)}
+.cnt:disabled{background:#f3f4f6;color:#9ca3af;border-color:#eceff4;cursor:not-allowed}
+.locknote{background:#eef6ff;border:1px solid #bfdbfe;color:#1e40af;border-radius:9px;padding:7px 12px;font-size:12.5px;margin-bottom:10px}
+.ffbox{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-2);cursor:pointer}
+.sheet-foot{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:11px}
+.sheet-foot .note{font-size:12px;color:var(--ink-3);flex:1;min-width:180px}
+.tie-note{margin-top:9px;background:#fffbeb;border:1px solid #fde68a;border-radius:9px;padding:9px 12px;font-size:12.5px;color:#92400e}
+.tie-note b{font-weight:700}
+.tie-note .btn{margin-left:6px;padding:4px 10px;font-size:12px}
+
+/* --- standings --- */
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(470px,1fr));gap:16px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.panel-head{padding:11px 15px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px}
+.panel-head h3{margin:0;font-size:15px;font-weight:800}
+.dot{width:9px;height:9px;border-radius:50%}
+.panel-head .note{margin-left:auto;font-size:11.5px;color:var(--ink-3)}
+table.st{width:100%;border-collapse:collapse;font-size:13px}
+.st thead th{text-align:center;font-size:10.5px;font-weight:700;color:var(--ink-3);padding:7px 3px;background:#fafbfc;border-bottom:1px solid var(--line)}
+.st thead th.left{text-align:left;padding-left:13px}
+.st tbody td{padding:8px 3px;text-align:center;border-bottom:1px solid #f1f3f7;font-variant-numeric:tabular-nums}
+.st tbody td.left{text-align:left;padding-left:13px}
+.st tbody tr:last-child td{border-bottom:0}
+.st tbody tr.qual{background:linear-gradient(90deg,rgba(15,157,88,.07),transparent 60%)}
+.rank{font-weight:800;width:24px}
+.rank.q{color:var(--win)}
+.tname{display:flex;align-items:center;gap:7px}
+.mini{width:25px;height:21px;border-radius:6px;display:grid;place-items:center;font-size:10px;font-weight:800;color:#fff;flex:none}
+.tname span{font-size:12.5px;overflow-wrap:anywhere}
+.pts{font-weight:800;color:var(--navy)}
+.sep{border-left:1px solid var(--line)}
+.legend{display:flex;gap:15px;flex-wrap:wrap;font-size:12px;color:var(--ink-3);margin-top:12px}
+.legend b{color:var(--ink-2);font-weight:600}
+
+/* --- bracket --- */
+.bracket{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;align-items:start}
+.bcol h4{margin:0 0 10px;font-size:12.5px;font-weight:800;color:var(--ink-3);letter-spacing:.5px;text-align:center}
+.bmatch{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);margin-bottom:12px;overflow:hidden}
+.bmatch .bh{font-size:10.5px;font-weight:700;color:var(--ink-3);padding:6px 12px;background:#fafbfc;border-bottom:1px solid var(--line);display:flex;justify-content:space-between}
+.bteam{display:flex;align-items:center;gap:8px;padding:9px 12px;font-size:13px}
+.bteam+.bteam{border-top:1px solid #f1f3f7}
+.bteam .bn{flex:1;overflow-wrap:anywhere}
+.bteam .bs{font-weight:800;font-variant-numeric:tabular-nums;color:var(--ink-3)}
+.bteam.won{background:var(--win-bg)}
+.bteam.won .bn{font-weight:700;color:var(--win)}
+.bteam.won .bs{color:var(--win)}
+.bteam.tbd .bn{color:var(--ink-3);font-style:italic}
+.bteam .mini{background:#d1d5db}
+.champ{background:linear-gradient(135deg,#fef9c3,#fde68a);border:1px solid #fbbf24;border-radius:12px;padding:16px;text-align:center;margin-top:12px}
+.champ .lb{font-size:11px;font-weight:800;color:#92400e;letter-spacing:1px}
+.champ .nmx{font-size:16px;font-weight:800;color:#78350f;margin-top:4px}
+
+.empty{padding:34px;text-align:center;color:var(--ink-3)}
+footer{padding:24px 0 40px;color:var(--ink-3);font-size:12.5px;text-align:center}
+.hidden{display:none!important}
+.toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,20px);background:var(--navy);color:#fff;padding:11px 20px;border-radius:11px;font-size:13.5px;box-shadow:0 10px 30px -8px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:.25s;z-index:99}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+@media (max-width:900px){
+  .mrow{grid-template-columns:1fr;gap:9px}
+  .side.a{justify-content:flex-start;text-align:left}
+  .m-status{align-items:flex-start}
+  .m-score{justify-content:flex-start}
+  .bracket{grid-template-columns:1fr}
+  .search input{width:100%}
+  .sheet thead th:first-child{width:34%}
+}
+@media print{
+  nav.tabs,.toolbar,.clockbox,.progress-row,footer,.sheet-foot,.toast{display:none!important}
+  body{background:#fff}
+  .match,.panel,.bmatch{box-shadow:none;break-inside:avoid}
+  header.hero{background:#0b2545!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="hero-top">
+      <div class="titlebox">
+        <h1>Korat Robot &amp; AI Challenge 2026</h1>
+        <span class="modebadge" id="modeBadge"></span>
+        <span class="cloudbadge wait" id="cloudBadge">กำลังเชื่อมต่อ…</span>
+      </div>
+      <div class="clockbox">
+        <div class="t" id="clock">--:--</div>
+        <div class="l" id="clockLabel">เวลาปัจจุบัน</div>
+      </div>
+    </div>
+    <div class="adminbar hidden" id="adminBar">
+      <span class="ab-note">เครื่องมือสำหรับกรรมการ</span>
+      <button class="btn ghost" id="btnViewLink">คัดลอกลิงก์สำหรับผู้ชม</button>
+      <button class="btn ghost" id="btnPush">ดันผลขึ้นใหม่ทั้งหมด</button>
+      <button class="btn ghost danger" id="btnReset">ล้างผลทั้งหมด</button>
+    </div>
+  </div>
+</header>
+
+<nav class="tabs">
+  <div class="wrap tabs-inner">
+    <button class="tab on" data-view="schedule">โปรแกรมการแข่งขัน</button>
+    <button class="tab" data-view="standings">ตารางคะแนนกลุ่ม</button>
+    <button class="tab" data-view="bracket">สายน็อกเอาต์</button>
+  </div>
+</nav>
+
+<main class="wrap">
+  <section id="view-schedule">
+    <div id="matchList"></div>
+  </section>
+
+  <section id="view-standings" class="hidden">
+    <div class="round-head" style="margin-top:22px">
+      <h2>ตารางคะแนนรอบแบ่งกลุ่ม</h2><span class="en">Group Standings</span>
+      <div class="rule"></div>
+    </div>
+    <div class="grid2" id="standingsWrap"></div>
+  </section>
+
+  <section id="view-bracket" class="hidden">
+    <div class="round-head" style="margin-top:20px">
+      <h2>สายการแข่งขันรอบน็อกเอาต์</h2><span class="en">Single Elimination</span><div class="rule"></div>
+    </div>
+    <div class="bracket" id="bracketWrap"></div>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =====================================================================
+   0) โหมดการใช้งาน
+   ---------------------------------------------------------------------
+   กรรมการ (แก้ไขได้) : เปิดลิงก์ที่ลงท้ายด้วย  ?admin=korat
+   ผู้ชม  (ดูอย่างเดียว): เปิดลิงก์ปกติ ไม่มี ?admin
+   เปลี่ยนรหัสได้ที่บรรทัดล่างนี้
+   ===================================================================== */
+const ADMIN_KEY="korat";
+const IS_ADMIN=(()=>{ const m=/[?&]admin=([^&#]*)/.exec(location.search); return !!m && m[1]===ADMIN_KEY; })();
+
+/* =====================================================================
+   0.1) ตั้งค่า Firebase — วางค่าจากหน้า Project settings ของคุณตรงนี้
+   ---------------------------------------------------------------------
+   ถ้ายังไม่ได้ตั้งค่า (ปล่อยว่างไว้) เว็บจะทำงานได้ปกติแบบออฟไลน์
+   คือเก็บผลไว้ในเบราว์เซอร์เครื่องเดียวเหมือนเวอร์ชันก่อนหน้า
+   ===================================================================== */
+const firebaseConfig = {
+    apiKey: "AIzaSyAwi3dWlGfv5H1Ju7YqwTULfzYw40OxBoY",
+    authDomain: "korat-robot-2026.firebaseapp.com",
+    databaseURL: "https://korat-robot-2026-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "korat-robot-2026",
+    storageBucket: "korat-robot-2026.firebasestorage.app",
+    messagingSenderId: "533121909806",
+    appId: "1:533121909806:web:7f3ee510e1d6414d480bbf"
+  };
+const ROOM="korat2026";    /* เปลี่ยนชื่อห้องได้ ถ้าอยากเริ่มข้อมูลชุดใหม่ */
+
+/* =====================================================================
+   1) ข้อมูลคงที่
+   ===================================================================== */
+const TEAMS = {
+  A1:"โรงเรียนมารีย์วิทยา", A2:"โรงเรียนสุรธรรมพิทักษ์", A3:"โรงเรียนโคราชพิทยาคม", A4:"โรงเรียนลำพระเพลิงพิทยาคม",
+  B1:"โรงเรียนเตรียมอุดมศึกษาน้อมเกล้า นครราชสีมา", B2:"โรงเรียนสุรวิวัฒน์", B3:"โรงเรียนโชคชัยสามัคคี", B4:"โรงเรียนเกียรติคุณวิทยา",
+  C1:"โรงเรียนปากช่อง", C2:"โรงเรียนสารสาสน์วิเทศโคราช", C3:"โรงเรียนสะแกราชธวัชศึกษา", C4:"โรงเรียนอุบลรัตนราชกัญญาราชวิทยาลัย นครราชสีมา",
+  D1:"วิทยาลัยเทคนิคหลวงพ่อคูณ ปริสุทโธ", D2:"วิทยาลัยเทคนิคนครราชสีมา", D3:"วิทยาลัยเทคนิคสุรนารี"
+};
+const GROUPS = {A:["A1","A2","A3","A4"],B:["B1","B2","B3","B4"],C:["C1","C2","C3","C4"],D:["D1","D2","D3"]};
+const T=c=>({t:"team",c}), GP=(g,pos)=>({t:"gp",g,pos}), W=m=>({t:"win",m});
+
+const MATCHES=[
+ {no:1,time:"12.10 - 12.15",arena:1,round:"group",g:"A",a:T("A2"),b:T("A3")},
+ {no:2,time:"12.15 - 12.20",arena:2,round:"group",g:"A",a:T("A4"),b:T("A1")},
+ {no:3,time:"12.20 - 12.25",arena:3,round:"group",g:"B",a:T("B2"),b:T("B3")},
+ {no:4,time:"12.25 - 12.30",arena:1,round:"group",g:"B",a:T("B4"),b:T("B1")},
+ {no:5,time:"12.30 - 12.35",arena:2,round:"group",g:"C",a:T("C2"),b:T("C3")},
+ {no:6,time:"12.35 - 12.40",arena:3,round:"group",g:"C",a:T("C4"),b:T("C1")},
+ {no:7,time:"12.40 - 12.45",arena:1,round:"group",g:"D",a:T("D2"),b:T("D3")},
+ {no:8,time:"12.45 - 12.50",arena:2,round:"group",g:"A",a:T("A1"),b:T("A2")},
+ {no:9,time:"12.50 - 12.55",arena:3,round:"group",g:"A",a:T("A3"),b:T("A4")},
+ {no:10,time:"12.55 - 13.00",arena:1,round:"group",g:"B",a:T("B1"),b:T("B2")},
+ {no:11,time:"13.00 - 13.05",arena:2,round:"group",g:"B",a:T("B3"),b:T("B4")},
+ {no:12,time:"13.05 - 13.10",arena:3,round:"group",g:"C",a:T("C1"),b:T("C2")},
+ {no:13,time:"13.10 - 13.15",arena:1,round:"group",g:"C",a:T("C3"),b:T("C4")},
+ {no:14,time:"13.15 - 13.20",arena:2,round:"group",g:"D",a:T("D1"),b:T("D2")},
+ {no:15,time:"13.20 - 13.25",arena:3,round:"group",g:"A",a:T("A4"),b:T("A2")},
+ {no:16,time:"13.25 - 13.30",arena:1,round:"group",g:"A",a:T("A3"),b:T("A1")},
+ {no:17,time:"13.30 - 13.35",arena:2,round:"group",g:"B",a:T("B4"),b:T("B2")},
+ {no:18,time:"13.35 - 13.40",arena:3,round:"group",g:"B",a:T("B3"),b:T("B1")},
+ {no:19,time:"13.40 - 13.45",arena:1,round:"group",g:"C",a:T("C4"),b:T("C2")},
+ {no:20,time:"13.45 - 13.50",arena:2,round:"group",g:"C",a:T("C3"),b:T("C1")},
+ {no:21,time:"13.50 - 13.55",arena:3,round:"group",g:"D",a:T("D3"),b:T("D1")},
+ {no:22,time:"14.30 - 14.35",arena:1,round:"qf",tag:"QF1",a:GP("A",1),b:GP("D",2)},
+ {no:23,time:"14.35 - 14.40",arena:2,round:"qf",tag:"QF2",a:GP("C",1),b:GP("B",2)},
+ {no:24,time:"14.40 - 14.45",arena:3,round:"qf",tag:"QF3",a:GP("B",1),b:GP("C",2)},
+ {no:25,time:"14.45 - 14.50",arena:1,round:"qf",tag:"QF4",a:GP("D",1),b:GP("A",2)},
+ {no:26,time:"15.20 - 15.25",arena:2,round:"sf",tag:"SF1",a:W(22),b:W(23)},
+ {no:27,time:"15.25 - 15.30",arena:3,round:"sf",tag:"SF2",a:W(24),b:W(25)},
+ {no:28,time:"15.55 - 16.00",arena:1,round:"final",tag:"FINAL",a:W(26),b:W(27)}
+];
+
+/* กติกาข้อ 3.2–3.5 : ขนาดชิ้นงานและน้ำหนักคะแนนต่างกันทุกรอบ */
+const RULES={
+ group:{th:"รอบแบ่งกลุ่ม",en:"Group Stage",
+   sizes:[{k:"L",label:"ใหญ่ (Large)",w:1},{k:"M",label:"กลาง (Medium)",w:1},{k:"S",label:"เล็ก (Small)",w:1}],
+   wrong:false, formula:"S = (1×nL) + (1×nM) + (1×nS)",
+   info:"ชิ้นงานเหลือง–เขียว–ฟ้า · วงล้อหมุนทุก 2.30 นาที",
+   tie:[{k:"S",dir:-1,lb:"ชิ้นงานเล็กมากกว่า"}]},
+ qf:{th:"รอบ 8 ทีมสุดท้าย",en:"Quarter-finals",
+   sizes:[{k:"L",label:"ใหญ่ (Large)",w:1},{k:"M",label:"กลาง (Medium)",w:1},{k:"S",label:"เล็ก (Small)",w:1}],
+   wrong:false, formula:"S = (1×nL) + (1×nM) + (1×nS)",
+   info:"ชิ้นงานแดง–เขียว–ฟ้า · วงล้อหมุนทุก 1.00 นาที",
+   tie:[{k:"S",dir:-1,lb:"ชิ้นงานเล็กมากกว่า"},{k:"M",dir:-1,lb:"ชิ้นงานกลางมากกว่า"},{k:"edit",dir:1,lb:"แก้ไขโปรแกรมน้อยกว่า"}]},
+ sf:{th:"รอบรองชนะเลิศ",en:"Semi-finals",
+   sizes:[{k:"M",label:"กลาง (Medium)",w:1},{k:"S",label:"เล็ก (Small)",w:2},{k:"SS",label:"เล็กมาก (Super Small)",w:3}],
+   wrong:false, formula:"S = (1×nM) + (2×nS) + (3×nSS)",
+   info:"ชิ้นงานแดง–เขียว–ฟ้า · วงล้อหมุนทุก 1.00 นาที",
+   tie:[{k:"SS",dir:-1,lb:"ชิ้นงานเล็กมากมากกว่า"},{k:"S",dir:-1,lb:"ชิ้นงานเล็กมากกว่า"},{k:"edit",dir:1,lb:"แก้ไขโปรแกรมน้อยกว่า"}]},
+ final:{th:"รอบชิงชนะเลิศ",en:"Grand Final",
+   sizes:[{k:"M",label:"กลาง (Medium)",w:1},{k:"S",label:"เล็ก (Small)",w:3},{k:"SS",label:"เล็กมาก (Super Small)",w:8}],
+   wrong:true, formula:"S = (1×nM) + (3×nS) + (8×nSS)  เฉพาะที่วางถูกถาดสี",
+   info:"ต้องแยกสีชิ้นงานลงถาดแดง–เหลือง–ฟ้า · วางผิดสีไม่ได้คะแนนและไม่ถูกหัก",
+   tie:[{k:"X",dir:1,lb:"วางผิดสีน้อยกว่า"},{k:"SS",dir:-1,lb:"ชิ้นงานเล็กมากถูกสีมากกว่า"},{k:"S",dir:-1,lb:"ชิ้นงานเล็กถูกสีมากกว่า"},{k:"edit",dir:1,lb:"แก้ไขโปรแกรมน้อยกว่า"}]}
+};
+const FIELDS=["L","M","S","SS","X","pen","edit","ff"];
+
+/* =====================================================================
+   2) สถานะผล
+   ===================================================================== */
+const blankTeam=()=>({L:0,M:0,S:0,SS:0,X:0,pen:0,edit:0,ff:0});
+const blankMatch=()=>({a:blankTeam(),b:blankTeam(),pick:null,entered:false});
+const results={}; MATCHES.forEach(m=>results[m.no]=blankMatch());
+const filters={round:"all",arena:"all",q:"",live:true};   /* ตัวกรองถูกซ่อน — แสดงทุกแมตช์ ไฮไลต์สดเสมอ */
+const open=new Set();
+
+/* ---- คะแนนภารกิจ ---- */
+function rawScore(m,side){
+  const r=results[m.no][side], cfg=RULES[m.round];
+  return cfg.sizes.reduce((s,z)=>s+z.w*(r[z.k]||0),0);
+}
+function netScore(m,side){
+  const r=results[m.no][side];
+  if(r.ff) return 0;                                   // ปรับแพ้ = คะแนนภารกิจ 0 (ข้อ 7.1)
+  return Math.max(0, rawScore(m,side)-(r.pen||0));     // หักคะแนนตามบทลงโทษ
+}
+/* ---- ผลแมตช์ + เกณฑ์ตัดสินเสมอรอบน็อกเอาต์ (ข้อ 6.6) ---- */
+function outcome(m){
+  const r=results[m.no];
+  if(!r.entered) return {winner:null,draw:false,pending:true,reason:""};
+  if(r.a.ff&&!r.b.ff) return {winner:"b",draw:false,reason:"คู่แข่งถูกปรับแพ้"};
+  if(r.b.ff&&!r.a.ff) return {winner:"a",draw:false,reason:"คู่แข่งถูกปรับแพ้"};
+  const A=netScore(m,"a"), B=netScore(m,"b");
+  if(A>B) return {winner:"a",draw:false,reason:""};
+  if(B>A) return {winner:"b",draw:false,reason:""};
+  if(m.round==="group") return {winner:null,draw:true,reason:""};
+  for(const c of RULES[m.round].tie){
+    const va=r.a[c.k]||0, vb=r.b[c.k]||0;
+    if(va!==vb){
+      const aWins=c.dir===-1 ? va>vb : va<vb;
+      return {winner:aWins?"a":"b",draw:false,reason:c.lb};
+    }
+  }
+  if(r.pick) return {winner:r.pick,draw:false,reason:"ดุลยพินิจกรรมการ"};
+  return {winner:null,draw:false,needPick:true,reason:""};
+}
+/* ---- ตารางคะแนนกลุ่ม (ข้อ 6.3–6.5) ---- */
+function standings(g){
+  const rows={}; GROUPS[g].forEach(c=>rows[c]={c,p:0,w:0,d:0,l:0,ptS:0,ptM:0,ptL:0,tot:0,mp:0,cntS:0,edit:0});
+  const ms=MATCHES.filter(m=>m.round==="group"&&m.g===g);
+  ms.forEach(m=>{
+    const r=results[m.no]; if(!r.entered) return;
+    const o=outcome(m), A=rows[m.a.c], B=rows[m.b.c];
+    [["a",A],["b",B]].forEach(([s,row])=>{
+      const d=r[s]; row.p++;
+      if(!d.ff){ row.ptL+=d.L; row.ptM+=d.M; row.ptS+=d.S; row.cntS+=d.S; }
+      row.tot+=netScore(m,s); row.edit+=d.edit||0;
+    });
+    if(o.draw){A.d++;B.d++;A.mp++;B.mp++;}
+    else if(o.winner==="a"){A.w++;B.l++;A.mp+=3;}
+    else if(o.winner==="b"){B.w++;A.l++;B.mp+=3;}
+  });
+  const list=Object.values(rows);
+  list.sort((x,y)=>y.mp-x.mp || y.tot-x.tot || y.cntS-x.cntS || x.edit-y.edit || x.c.localeCompare(y.c));
+  for(let i=0;i<list.length;){                 // เกณฑ์ 1: พบกันโดยตรง เฉพาะกรณีเท่ากัน 2 ทีม
+    let j=i; while(j+1<list.length&&list[j+1].mp===list[i].mp) j++;
+    if(j-i===1){
+      const x=list[i],y=list[i+1];
+      const h=ms.find(m=>results[m.no].entered&&((m.a.c===x.c&&m.b.c===y.c)||(m.a.c===y.c&&m.b.c===x.c)));
+      if(h){ const o=outcome(h);
+        if(!o.draw&&o.winner){ const wc=(o.winner==="a"?h.a.c:h.b.c); if(wc===y.c){list[i]=y;list[i+1]=x;} } }
+    }
+    i=j+1;
+  }
+  return {list,complete:ms.every(m=>results[m.no].entered)};
+}
+function resolve(ref){
+  if(ref.t==="team") return {code:ref.c,name:TEAMS[ref.c]};
+  if(ref.t==="gp"){ const s=standings(ref.g);
+    if(s.complete&&s.list[ref.pos-1]){const c=s.list[ref.pos-1].c;return {code:c,name:TEAMS[c]};}
+    return {code:null,name:"อันดับ "+ref.pos+" กลุ่ม "+ref.g}; }
+  const src=MATCHES.find(m=>m.no===ref.m), o=outcome(src);
+  if(o.winner){ const c=resolve(o.winner==="a"?src.a:src.b).code; if(c) return {code:c,name:TEAMS[c]}; }
+  return {code:null,name:"ผู้ชนะ "+(src.tag||"Match "+src.no)};
+}
+
+/* =====================================================================
+   3) บันทึกอัตโนมัติ  (URL + ที่เก็บในเบราว์เซอร์)
+   ===================================================================== */
+const KEY="korat2026";
+function encodeMatch(no){
+  const r=results[no];
+  const arr=[...FIELDS.map(f=>r.a[f]||0),...FIELDS.map(f=>r.b[f]||0),
+             r.pick==="a"?1:r.pick==="b"?2:0, r.entered?1:0];
+  if(arr.every(v=>!v)) return "";
+  return arr.join("-").replace(/(-0)+$/,"");
+}
+function decodeMatch(no,s){
+  const r=results[no]=blankMatch();
+  if(!s) return;
+  const v=String(s).split("-").map(Number);
+  const get=i=>Number.isFinite(v[i])?v[i]:0;
+  FIELDS.forEach((f,i)=>{r.a[f]=get(i); r.b[f]=get(i+8);});
+  const p=get(16); r.pick=p===1?"a":p===2?"b":null;
+  r.entered=get(17)===1;
+}
+function encode(){
+  const out=[];
+  MATCHES.forEach(m=>{ const s=encodeMatch(m.no); if(s) out.push(m.no+"."+s); });
+  return out.join("_");
+}
+function decode(str){
+  MATCHES.forEach(m=>results[m.no]=blankMatch());
+  if(!str) return;
+  str.split("_").forEach(seg=>{
+    const i=seg.indexOf(".");
+    if(i<0) return;
+    const no=+seg.slice(0,i);
+    if(results[no]) decodeMatch(no,seg.slice(i+1));
+  });
+}
+let saveTimer=null, chan=null;
+try{ chan=new BroadcastChannel("korat2026"); }catch(e){}
+
+/* ---------- ที่เก็บในเครื่อง (ทำงานเสมอ แม้เน็ตหลุด) ---------- */
+function save(no){                     /* บันทึกอัตโนมัติเงียบ ๆ — เฉพาะโหมดกรรมการเท่านั้น */
+  if(!IS_ADMIN) return;
+  if(no!=null) pushCloud(no); else pushAll();
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>{
+    const s=encode();
+    try{ localStorage.setItem(KEY,s); }catch(e){}
+    try{ history.replaceState(null,"",location.pathname+location.search+(s?"#"+s:"")); }catch(e){}
+    try{ chan&&chan.postMessage(s); }catch(e){}    /* หน้าต่างอื่นบนเครื่องเดียวกัน */
+  },250);
+}
+function applyRemote(s){
+  if(IS_ADMIN||s==null||s===encode()) return;
+  decode(s); renderAll();
+}
+if(chan) chan.onmessage=e=>applyRemote(e.data);
+window.addEventListener("storage",e=>{ if(e.key===KEY) applyRemote(e.newValue); });
+
+/* =====================================================================
+   3.1) ซิงก์สดผ่าน Firebase — ทุกเครื่อง ทุกมือถือ เห็นพร้อมกัน
+   ===================================================================== */
+let db=null, cloudReady=false, firstSnap=true;
+function setCloud(state,txt){
+  const e=el("cloudBadge"); if(!e) return;
+  e.className="cloudbadge "+state; e.textContent=txt;
+}
+function pushCloud(no){
+  if(!db||!IS_ADMIN) return;
+  try{ db.ref(ROOM+"/m/"+no).set(encodeMatch(no)||null); }catch(e){}
+}
+function pushAll(){
+  if(!db||!IS_ADMIN) return;
+  const obj={}; MATCHES.forEach(m=>{const s=encodeMatch(m.no); if(s) obj[m.no]=s;});
+  try{ db.ref(ROOM+"/m").set(obj); }catch(e){}
+}
+function applyCloud(val){
+  const obj=val||{};
+  /* อย่าทับแมตช์ที่กรรมการกำลังพิมพ์อยู่ */
+  const act=document.activeElement;
+  const busy=(act&&act.dataset&&act.dataset.m)?+act.dataset.m:null;
+  let changed=false;
+  MATCHES.forEach(m=>{
+    if(m.no===busy) return;
+    const s=obj[m.no]||"";
+    if(s!==encodeMatch(m.no)){ decodeMatch(m.no,s); changed=true; }
+  });
+  if(changed){ renderAll(); if(IS_ADMIN){ try{localStorage.setItem(KEY,encode());}catch(e){} } }
+}
+function initCloud(){
+  if(!FIREBASE_CONFIG.databaseURL||typeof firebase==="undefined"){
+    setCloud("off","โหมดออฟไลน์ · ยังไม่ได้ตั้งค่า Firebase"); return;
+  }
+  try{
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db=firebase.database();
+    setCloud("wait","กำลังเชื่อมต่อ…");
+    db.ref(".info/connected").on("value",s=>{
+      cloudReady=!!s.val();
+      setCloud(cloudReady?"live":"down",
+        cloudReady?"เชื่อมต่อสด · อัปเดตอัตโนมัติ":"เน็ตหลุด · จะซิงก์ให้เมื่อกลับมาออนไลน์");
+    });
+    db.ref(ROOM+"/m").on("value",snap=>{
+      const val=snap.val()||{};
+      if(firstSnap){
+        firstSnap=false;
+        const cloudEmpty=Object.keys(val).length===0;
+        const localHas=MATCHES.some(m=>encodeMatch(m.no));
+        if(cloudEmpty&&localHas&&IS_ADMIN){ pushAll(); return; }   /* ดันข้อมูลเดิมขึ้นครั้งแรก */
+      }
+      applyCloud(val);
+    },()=>setCloud("down","อ่านข้อมูลไม่ได้ · ตรวจสอบ Rules ของฐานข้อมูล"));
+  }catch(e){ setCloud("off","เชื่อมต่อ Firebase ไม่สำเร็จ · ใช้โหมดออฟไลน์"); }
+}
+function load(){
+  let s="";
+  try{ s=decodeURIComponent(location.hash.slice(1)); }catch(e){}
+  if(!s){ try{ s=localStorage.getItem(KEY)||""; }catch(e){} }
+  decode(s);
+}
+
+/* =====================================================================
+   4) แสดงผล
+   ===================================================================== */
+const el=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function parseSlot(t){const [s,e]=t.split(" - ");const f=x=>{const[h,m]=x.split(".");return +h*60+ +m;};return [f(s),f(e)];}
+function liveNo(){ if(!filters.live) return null;
+  const d=new Date(), n=d.getHours()*60+d.getMinutes();
+  const m=MATCHES.find(m=>{const[s,e]=parseSlot(m.time);return n>=s&&n<e;}); return m?m.no:null; }
+
+function tieHTML(m){
+  const r=results[m.no], o=outcome(m);
+  if(!r.entered) return "";
+  const A=resolve(m.a), B=resolve(m.b);
+  if(o.needPick)
+    return '<div class="tie-note"><b>คะแนนและเกณฑ์ตัดสินเท่ากันทุกข้อ</b> — รอบน็อกเอาต์ไม่มีผลเสมอ (ข้อ 6.6) ให้กรรมการชี้ขาด'+
+      (IS_ADMIN
+        ? '<button class="btn" data-pick="a" data-m="'+m.no+'">'+esc(A.name)+' ชนะ</button>'+
+          '<button class="btn" data-pick="b" data-m="'+m.no+'">'+esc(B.name)+' ชนะ</button>'
+        : "")+'</div>';
+  if(o.reason) return '<div class="tie-note">ตัดสินด้วยเกณฑ์: <b>'+o.reason+'</b></div>';
+  return "";
+}
+function sheetHTML(m){
+  const cfg=RULES[m.round], r=results[m.no];
+  const A=resolve(m.a), B=resolve(m.b);
+  const lock=(r.entered||!IS_ADMIN)?" disabled":"";
+  /* type=text + inputmode=numeric : ทำให้ควบคุมตำแหน่ง cursor ได้จริง (type=number อ่าน selectionStart ไม่ได้) */
+  const num=(side,k,cls)=>'<input class="cnt '+(cls||"")+'" type="text" inputmode="numeric" autocomplete="off" '+
+    'value="'+(r[side][k]||0)+'" data-m="'+m.no+'" data-side="'+side+'" data-k="'+k+'"'+lock+'>';
+  let rows="";
+  cfg.sizes.forEach(z=>{
+    rows+='<tr><td>'+z.label+'<span class="wbadge">×'+z.w+'</span></td><td>'+num("a",z.k)+'</td><td>'+num("b",z.k)+'</td></tr>';
+  });
+  if(cfg.wrong) rows+='<tr><td>วางผิดถาดสี <span class="wbadge" style="background:#fee2e2;color:#b91c1c">0 คะแนน</span></td><td>'+num("a","X")+'</td><td>'+num("b","X")+'</td></tr>';
+  rows+='<tr class="sum"><td>คะแนนภารกิจ (S)</td><td data-calc="raw-a">'+rawScore(m,"a")+'</td><td data-calc="raw-b">'+rawScore(m,"b")+'</td></tr>';
+  rows+='<tr class="net"><td>คะแนนภารกิจสุทธิ</td><td data-calc="net-a">'+netScore(m,"a")+'</td><td data-calc="net-b">'+netScore(m,"b")+'</td></tr>';
+  rows+='<tr><td>แก้ไขโปรแกรม (ครั้ง)</td><td>'+num("a","edit")+'</td><td>'+num("b","edit")+'</td></tr>';
+  const ff=s=>'<label class="ffbox"><input type="checkbox" data-m="'+m.no+'" data-side="'+s+'" data-k="ff"'+(r[s].ff?" checked":"")+lock+'> ปรับแพ้</label>';
+  rows+='<tr><td>ปรับแพ้ในแมตช์ (Match Forfeit)</td><td>'+ff("a")+'</td><td>'+ff("b")+'</td></tr>';
+
+  const head = !IS_ADMIN
+    ? '<div class="viewnote">โหมดผู้ชม — ดูผลได้อย่างเดียว ไม่สามารถแก้ไขคะแนนได้</div>'
+    : (r.entered?'<div class="locknote">ผลนี้ยืนยันแล้ว — กด <b>แก้ไขผล</b> ก่อนจึงจะพิมพ์แก้ได้</div>':"");
+  const foot = !IS_ADMIN ? "" :
+    '<div class="sheet-foot"><span class="note"></span>'+
+      (r.entered
+        ? '<button class="btn" data-unenter="'+m.no+'">แก้ไขผล</button><button class="btn danger" data-clear="'+m.no+'">ล้างแมตช์นี้</button>'
+        : '<button class="btn primary" data-enter="'+m.no+'">ยืนยันผลแมตช์นี้</button><button class="btn danger" data-clear="'+m.no+'">ล้างแมตช์นี้</button>')+
+    '</div>';
+  return '<div class="sheet-wrap">'+head+
+    '<table class="sheet"><thead><tr><th>รายการ</th><th>'+esc(A.name)+'</th><th>'+esc(B.name)+'</th></tr></thead><tbody>'+rows+'</tbody></table>'+
+    '<div data-calc="tie">'+tieHTML(m)+'</div>'+foot+'</div>';
+}
+
+function matchClass(m,live){
+  const r=results[m.no], A=resolve(m.a), B=resolve(m.b);
+  const touched=FIELDS.some(f=>r.a[f]||r.b[f]);
+  const cls=["match"];
+  if(r.entered) cls.push("done"); else if(touched) cls.push("draft");
+  if(live===m.no) cls.push("live");
+  if(filters.q){
+    const hay=(A.name+B.name+(A.code||"")+(B.code||"")).toLowerCase();
+    cls.push(hay.includes(filters.q)?"hit":"dim");
+  }
+  return cls.join(" ");
+}
+function mrowHTML(m,live){
+  const r=results[m.no], o=outcome(m), A=resolve(m.a), B=resolve(m.b);
+  const locked=!A.code||!B.code;
+  const touched=FIELDS.some(f=>r.a[f]||r.b[f]);
+  const side=(s,tm,mine,opp)=>{
+    const c=["side",s]; let lb="";
+    if(r.entered&&!o.needPick){
+      if(o.draw) lb='<div class="res d">เสมอ</div>';
+      else if(o.winner===s){c.push("won"); lb='<div class="res w">'+(m.round==="group"?"ชนะ":"ผ่านเข้ารอบ")+'</div>';}
+      else {c.push("lost"); lb='<div class="res l">'+(m.round==="group"?"แพ้":"ตกรอบ")+'</div>';}
+      if(r[s].ff) lb='<div class="res l">ปรับแพ้</div>';
+    }
+    const bd=tm.code?'<div class="code '+tm.code[0]+'">'+tm.code+'</div>':'<div class="code tbd">?</div>';
+    const nm='<div class="nm"><div class="school'+(tm.code?"":" pend")+'">'+esc(tm.name)+'</div>'+lb+'</div>';
+    return '<div class="'+c.join(" ")+'">'+(s==="a"?nm+bd:bd+nm)+'</div>';
+  };
+  const bigCls=s=>{ if(!r.entered) return touched?"big":"big blank"; if(o.draw) return "big d"; return o.winner===s?"big w":"big"; };
+  const scoreTxt=s=>(r.entered||touched)?netScore(m,s):"–";
+
+  let pill,hint="";
+  if(r.entered&&o.needPick) pill='<span class="pill warn">รอกรรมการชี้ขาด</span>';
+  else if(r.entered&&o.draw) pill='<span class="pill drawp">เสมอ 1–1</span>';
+  else if(r.entered) pill='<span class="pill done">ยืนยันแล้ว</span>';
+  else if(touched) pill='<span class="pill warn">ร่าง ยังไม่ยืนยัน</span>';
+  else if(live===m.no) pill='<span class="pill live">กำลังแข่ง</span>';
+  else if(locked) pill='<span class="pill wait">รอสายคู่</span>';
+  else pill='<span class="pill wait">รอแข่ง</span>';
+  if(!locked) hint='<span class="hint">'+(open.has(m.no)?"▲ ปิดใบคะแนน":(IS_ADMIN?"▼ ลงคะแนน":"▼ ดูใบคะแนน"))+'</span>';
+
+  const tags=[];
+  if(m.g) tags.push('<span class="tag g g'+m.g+'">กลุ่ม '+m.g+'</span>');
+  if(m.tag) tags.push('<span class="tag g g'+(m.round==="final"?"D":"A")+'">'+m.tag+'</span>');
+  tags.push('<span class="tag arena">สนาม '+m.arena+'</span>');
+  if(live===m.no) tags.push('<span class="tag live">LIVE</span>');
+
+  return '<div class="mrow" data-toggle="'+m.no+'">'+
+      '<div class="m-meta"><div class="m-no">MATCH '+m.no+'</div><div class="m-time">'+m.time.replace(" - ","–")+'</div><div class="m-tags">'+tags.join("")+'</div></div>'+
+      side("a",A,"a","b")+
+      '<div class="m-score"><span class="'+bigCls("a")+'">'+scoreTxt("a")+'</span><span class="vs">VS</span><span class="'+bigCls("b")+'">'+scoreTxt("b")+'</span></div>'+
+      side("b",B,"b","a")+
+      '<div class="m-status">'+pill+hint+'</div>'+
+    '</div>';
+}
+function matchHTML(m,live){
+  const A=resolve(m.a), B=resolve(m.b), locked=!A.code||!B.code;
+  return '<div class="'+matchClass(m,live)+'" data-match="'+m.no+'">'+
+    mrowHTML(m,live)+
+    (open.has(m.no)&&!locked?sheetHTML(m):"")+
+  '</div>';
+}
+/* อัปเดตเฉพาะแมตช์เดียวโดยไม่แตะช่องกรอก — cursor จึงไม่ถูกรีเซ็ต */
+function refreshMatch(no){
+  const m=MATCHES.find(x=>x.no===no);
+  const wrap=document.querySelector('.match[data-match="'+no+'"]');
+  if(!m||!wrap) return;
+  const live=liveNo();
+  wrap.className=matchClass(m,live);
+  const row=wrap.querySelector(".mrow");
+  if(row) row.outerHTML=mrowHTML(m,live);
+  const q=s=>wrap.querySelector('[data-calc="'+s+'"]');
+  const set=(s,v)=>{const n=q(s); if(n) n.textContent=v;};
+  set("raw-a",rawScore(m,"a")); set("raw-b",rawScore(m,"b"));
+  set("net-a",netScore(m,"a")); set("net-b",netScore(m,"b"));
+  const t=q("tie"); if(t) t.innerHTML=tieHTML(m);
+}
+
+function renderSchedule(){
+  const live=liveNo(); let html="";
+  ["group","qf","sf","final"].forEach(rd=>{
+    if(filters.round!=="all"&&filters.round!==rd) return;
+    let ms=MATCHES.filter(m=>m.round===rd);
+    if(filters.arena!=="all") ms=ms.filter(m=>String(m.arena)===filters.arena);
+    if(!ms.length) return;
+    const cfg=RULES[rd];
+    html+='<div class="round-head"><h2>'+cfg.th+'</h2><span class="en">'+cfg.en+'</span><div class="rule"></div></div>'+
+      '<div class="matches">'+ms.map(m=>matchHTML(m,live)).join("")+'</div>';
+  });
+  el("matchList").innerHTML=html||'<div class="empty">ไม่มีแมตช์ที่ตรงกับตัวกรอง</div>';
+}
+
+function renderStandings(){
+  let html="";
+  ["A","B","C","D"].forEach(g=>{
+    const {list,complete}=standings(g);
+    html+='<div class="panel"><div class="panel-head"><span class="dot" style="background:var(--g'+g+')"></span><h3>กลุ่ม '+g+'</h3>'+
+      '<span class="note">'+GROUPS[g].length+' ทีม · '+(complete?"จบรอบแล้ว":"ยังแข่งไม่ครบ")+'</span></div>'+
+      '<table class="st"><thead><tr><th>#</th><th class="left">ทีม</th><th>แข่ง</th><th>ชนะ</th><th>เสมอ</th><th>แพ้</th>'+
+      '<th class="sep">เล็ก</th><th>กลาง</th><th>ใหญ่</th><th>รวม</th><th>แก้ไข</th><th class="sep">คะแนน</th></tr></thead><tbody>';
+    list.forEach((r,i)=>{
+      const q=i<2;
+      html+='<tr'+(q?' class="qual"':"")+'><td class="rank'+(q?" q":"")+'">'+(i+1)+'</td>'+
+        '<td class="left"><div class="tname"><span class="mini" style="background:var(--g'+g+')">'+r.c+'</span><span>'+esc(TEAMS[r.c])+'</span></div></td>'+
+        '<td>'+r.p+'</td><td>'+r.w+'</td><td>'+r.d+'</td><td>'+r.l+'</td>'+
+        '<td class="sep">'+r.ptS+'</td><td>'+r.ptM+'</td><td>'+r.ptL+'</td><td><b>'+r.tot+'</b></td><td>'+r.edit+'</td>'+
+        '<td class="sep pts">'+r.mp+'</td></tr>';
+    });
+    html+='</tbody></table></div>';
+  });
+  el("standingsWrap").innerHTML=html;
+}
+
+function renderBracket(){
+  const cols=[{h:"รอบ 8 ทีมสุดท้าย",ms:MATCHES.filter(m=>m.round==="qf")},
+              {h:"รอบรองชนะเลิศ",ms:MATCHES.filter(m=>m.round==="sf")},
+              {h:"รอบชิงชนะเลิศ",ms:MATCHES.filter(m=>m.round==="final")}];
+  let html="";
+  cols.forEach(col=>{
+    html+='<div class="bcol"><h4>'+col.h+'</h4>';
+    col.ms.forEach(m=>{
+      const r=results[m.no], o=outcome(m);
+      const row=s=>{
+        const t=resolve(s==="a"?m.a:m.b), isW=o.winner===s;
+        return '<div class="bteam'+(isW?" won":"")+(t.code?"":" tbd")+'">'+
+          '<span class="mini"'+(t.code?' style="background:var(--g'+t.code[0]+')"':"")+'>'+(t.code||"?")+'</span>'+
+          '<span class="bn">'+esc(t.name)+'</span><span class="bs">'+(r.entered?netScore(m,s):"–")+'</span></div>';
+      };
+      html+='<div class="bmatch"><div class="bh"><span>'+(m.tag||"Match "+m.no)+'</span><span>'+m.time.replace(" - ","–")+' · สนาม '+m.arena+'</span></div>'+row("a")+row("b")+'</div>';
+    });
+    if(col.ms[0]&&col.ms[0].round==="final"){
+      const f=col.ms[0], o=outcome(f);
+      const c=o.winner?resolve(o.winner==="a"?f.a:f.b).code:null;
+      html+='<div class="champ"><div class="lb">🏆 ชนะเลิศ</div><div class="nmx">'+(c?esc(TEAMS[c]):"รอผลการแข่งขัน")+'</div></div>';
+    }
+    html+='</div>';
+  });
+  el("bracketWrap").innerHTML=html;
+}
+
+function renderProgress(){}
+function renderAll(){renderSchedule();renderStandings();renderBracket();}
+
+/* =====================================================================
+   5) เหตุการณ์
+   ===================================================================== */
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on")); t.classList.add("on");
+  ["schedule","standings","bracket"].forEach(v=>el("view-"+v).classList.toggle("hidden",v!==t.dataset.view));
+});
+/* เข้าช่องครั้งแรก = เลือกเลขเดิมทั้งหมด พิมพ์ทับได้เลย / คลิกซ้ำ = วาง cursor ได้อิสระ */
+el("matchList").addEventListener("focusin",e=>{
+  const i=e.target; if(!i.classList||!i.classList.contains("cnt")) return;
+  i.dataset.fresh="1"; try{i.select();}catch(_){}
+});
+el("matchList").addEventListener("mouseup",e=>{
+  const i=e.target; if(!i.classList||!i.classList.contains("cnt")) return;
+  e.preventDefault(); try{i.select();}catch(_){}
+});
+el("matchList").addEventListener("keydown",e=>{
+  const i=e.target; if(!IS_ADMIN||!i.classList||!i.classList.contains("cnt")) return;
+  const cur=results[+i.dataset.m][i.dataset.side][i.dataset.k]||0;
+  if(e.key==="ArrowUp"||e.key==="ArrowDown"){          // ลูกศรขึ้น/ลง = บวก/ลบทีละ 1
+    e.preventDefault();
+    const v=Math.max(0,Math.min(999,cur+(e.key==="ArrowUp"?1:-1)));
+    i.value=v; results[+i.dataset.m][i.dataset.side][i.dataset.k]=v;
+    refreshMatch(+i.dataset.m); renderStandings(); renderBracket(); renderProgress(); save(+i.dataset.m);
+    try{i.setSelectionRange(String(v).length,String(v).length);}catch(_){}
+  }
+  if(e.key==="Enter"){                                  // Enter = ไปช่องถัดไป
+    e.preventDefault();
+    const all=[...i.closest(".sheet-wrap").querySelectorAll(".cnt")];
+    const nx=all[all.indexOf(i)+1]; if(nx) nx.focus(); else i.blur();
+  }
+});
+el("matchList").addEventListener("input",e=>{
+  const i=e.target; if(!IS_ADMIN||!i.dataset.k||i.type==="checkbox") return;
+  const {m,side,k}=i.dataset;
+  const before=i.value, pos=i.selectionStart;
+  const clean=before.replace(/[^0-9]/g,"").slice(0,3);   // รับเฉพาะตัวเลข
+  if(clean!==before){
+    i.value=clean;
+    const p=Math.max(0,pos-(before.length-clean.length));
+    try{i.setSelectionRange(p,p);}catch(_){}
+  }
+  results[+m][side][k]=clean===""?0:parseInt(clean,10);
+  refreshMatch(+m); renderStandings(); renderBracket(); renderProgress(); save(+m);
+});
+el("matchList").addEventListener("focusout",e=>{        // ออกจากช่องแล้วจัดรูปเลขให้เรียบร้อย
+  const i=e.target; if(!i.classList||!i.classList.contains("cnt")) return;
+  i.value=String(results[+i.dataset.m][i.dataset.side][i.dataset.k]||0);
+});
+el("matchList").addEventListener("change",e=>{
+  const i=e.target; if(!IS_ADMIN||i.type!=="checkbox"||!i.dataset.k) return;
+  results[+i.dataset.m][i.dataset.side].ff=i.checked?1:0; renderAll(); save(+i.dataset.m);
+});
+el("matchList").addEventListener("click",e=>{
+  const t=e.target;
+  if(IS_ADMIN){
+    const en=t.closest("[data-enter]"); if(en){results[+en.dataset.enter].entered=true;renderAll();save(+en.dataset.enter);toast("ยืนยันผล Match "+en.dataset.enter+" แล้ว");return;}
+    const un=t.closest("[data-unenter]"); if(un){results[+un.dataset.unenter].entered=false;renderAll();save(+un.dataset.unenter);return;}
+    const cl=t.closest("[data-clear]"); if(cl){results[+cl.dataset.clear]=blankMatch();renderAll();save(+cl.dataset.clear);return;}
+    const pk=t.closest("[data-pick]"); if(pk){results[+pk.dataset.m].pick=pk.dataset.pick;renderAll();save(+pk.dataset.m);return;}
+  }
+  const tg=t.closest("[data-toggle]");
+  if(tg){ const no=+tg.dataset.toggle;
+    const A=resolve(MATCHES.find(m=>m.no===no).a), B=resolve(MATCHES.find(m=>m.no===no).b);
+    if(!A.code||!B.code){toast("ยังไม่ทราบทีมที่จะลงแข่งในแมตช์นี้");return;}
+    open.has(no)?open.delete(no):open.add(no); renderSchedule(); }
+});
+
+function toast(msg){const t=el("toast");t.textContent=msg;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),2200);}
+
+window.addEventListener("hashchange",()=>{ const s=location.hash.slice(1); if(s!==encode()){decode(s);renderAll();} });
+
+/* ---- แถบเครื่องมือกรรมการ (ซ่อนทั้งแถบในโหมดผู้ชม) ---- */
+el("modeBadge").textContent=IS_ADMIN?"โหมดกรรมการ · บันทึกผลได้":"โหมดผู้ชม · ดูอย่างเดียว";
+el("modeBadge").className="modebadge "+(IS_ADMIN?"admin":"view");
+if(IS_ADMIN){
+  el("adminBar").classList.remove("hidden");
+  el("btnViewLink").onclick=()=>{
+    save();
+    setTimeout(()=>{
+      const url=location.origin+location.pathname+"#"+encode();   /* ตัด ?admin ออก = ลิงก์ผู้ชม */
+      const fallback=()=>{const ta=document.createElement("textarea");ta.value=url;ta.style.position="fixed";ta.style.opacity="0";
+        document.body.appendChild(ta);ta.select();try{document.execCommand("copy");}catch(e){}document.body.removeChild(ta);};
+      if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(url).catch(fallback);
+      else fallback();
+      toast("คัดลอกลิงก์ผู้ชมแล้ว — ลิงก์นี้ดูได้อย่างเดียว แก้ไขไม่ได้");
+    },320);
+  };
+  el("btnPush").onclick=()=>{ pushAll(); toast(db?"ส่งผลทั้งหมดขึ้นระบบใหม่แล้ว":"ยังไม่ได้ตั้งค่า Firebase"); };
+  let armed=false;
+  el("btnReset").onclick=()=>{
+    if(!armed){armed=true;el("btnReset").textContent="กดอีกครั้งเพื่อยืนยัน";
+      setTimeout(()=>{armed=false;el("btnReset").textContent="ล้างผลทั้งหมด";},3000);return;}
+    MATCHES.forEach(m=>results[m.no]=blankMatch()); open.clear(); armed=false;
+    el("btnReset").textContent="ล้างผลทั้งหมด"; renderAll(); save(); toast("ล้างผลทั้งหมดแล้ว");
+  };
+}
+
+let lastLive="x";
+function tick(){
+  const d=new Date();
+  el("clock").textContent=String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+  const l=liveNo();
+  el("clockLabel").textContent=l?"กำลังแข่ง Match "+l:"เวลาปัจจุบัน";
+  if(l!==lastLive){lastLive=l;renderSchedule();}
+}
+setInterval(tick,15000);
+
+load(); renderAll(); tick(); initCloud();
+</script>
+</body>
+</html>
