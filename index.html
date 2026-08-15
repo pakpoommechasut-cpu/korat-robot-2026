@@ -49,16 +49,6 @@ header.hero::after{content:"";position:absolute;right:-70px;top:-70px;width:280p
 .hero-top{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between}
 .hero h1{margin:0;font-family:var(--f-dp);font-size:23px;font-weight:700;letter-spacing:-.01em}
 .titlebox{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.modebadge{font-size:11.5px;font-weight:600;padding:5px 12px;border-radius:99px;letter-spacing:.01em;white-space:nowrap}
-.modebadge.admin{background:rgba(74,222,128,.2);color:#bbf7d0;border:1px solid rgba(74,222,128,.45)}
-.modebadge.view{background:rgba(255,255,255,.13);color:#cfe0f5;border:1px solid rgba(255,255,255,.22)}
-.cloudbadge{font-size:11.5px;font-weight:600;padding:5px 12px 5px 24px;border-radius:99px;white-space:nowrap;position:relative;background:rgba(255,255,255,.1);color:#cfe0f5;border:1px solid rgba(255,255,255,.18)}
-.cloudbadge::before{content:"";position:absolute;left:10px;top:50%;transform:translateY(-50%);width:7px;height:7px;border-radius:50%;background:#94a3b8}
-.cloudbadge.live::before{background:#4ade80;box-shadow:0 0 0 0 rgba(74,222,128,.7);animation:ping 2s infinite}
-.cloudbadge.wait::before{background:#fbbf24}
-.cloudbadge.down::before{background:#f87171}
-.cloudbadge.off::before{background:#94a3b8}
-@keyframes ping{70%{box-shadow:0 0 0 7px rgba(74,222,128,0)}100%{box-shadow:0 0 0 0 rgba(74,222,128,0)}}
 .adminbar{display:flex;align-items:center;gap:9px;margin-top:14px;padding-top:13px;border-top:1px solid rgba(255,255,255,.14);flex-wrap:wrap}
 .adminbar .ab-note{font-size:12px;color:#9fb6d4;margin-right:2px}
 .btn.ghost{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2);color:#e6eefb;font-size:12.5px;padding:6px 12px}
@@ -263,9 +253,6 @@ footer{padding:24px 0 40px;color:var(--ink-3);font-size:12.5px;text-align:center
   .hero-top{flex-wrap:nowrap;align-items:center;gap:12px}
   .titlebox{flex:1;min-width:0}
   .hero h1{font-size:18px;line-height:1.25}
-  .modebadge,.cloudbadge{font-size:10px;padding:3px 9px}
-  .cloudbadge{padding-left:20px}
-  .cloudbadge::before{left:8px;width:6px;height:6px}
   .clockbox{flex:none;min-width:auto;padding:6px 12px}
   .clockbox .t{font-size:19px}
   .clockbox .l{font-size:10px}
@@ -320,8 +307,6 @@ footer{padding:24px 0 40px;color:var(--ink-3);font-size:12.5px;text-align:center
     <div class="hero-top">
       <div class="titlebox">
         <h1>Korat Robot &amp; AI Challenge 2026</h1>
-        <span class="modebadge" id="modeBadge"></span>
-        <span class="cloudbadge wait" id="cloudBadge">กำลังเชื่อมต่อ…</span>
       </div>
       <div class="clockbox">
         <div class="t" id="clock">--:--</div>
@@ -604,10 +589,6 @@ window.addEventListener("storage",e=>{ if(e.key===KEY) applyRemote(e.newValue); 
    3.1) ซิงก์สดผ่าน Firebase — ทุกเครื่อง ทุกมือถือ เห็นพร้อมกัน
    ===================================================================== */
 let db=null, cloudReady=false, firstSnap=true;
-function setCloud(state,txt){
-  const e=el("cloudBadge"); if(!e) return;
-  e.className="cloudbadge "+state; e.textContent=txt;
-}
 function pushCloud(no){
   if(!db||!IS_ADMIN) return;
   try{ db.ref(ROOM+"/m/"+no).set(encodeMatch(no)||null); }catch(e){}
@@ -631,17 +612,17 @@ function applyCloud(val){
   if(changed){ renderAll(); if(IS_ADMIN){ try{localStorage.setItem(KEY,encode());}catch(e){} } }
 }
 function initCloud(){
-  if(!FIREBASE_CONFIG.databaseURL||typeof firebase==="undefined"){
-    setCloud("off","โหมดออฟไลน์ · ยังไม่ได้ตั้งค่า Firebase"); return;
-  }
+  if(!FIREBASE_CONFIG.databaseURL||typeof firebase==="undefined") return;   /* ไม่ได้ตั้งค่า = ใช้โหมดออฟไลน์ */
   try{
     firebase.initializeApp(FIREBASE_CONFIG);
     db=firebase.database();
-    setCloud("wait","กำลังเชื่อมต่อ…");
+    let seen=false;
     db.ref(".info/connected").on("value",s=>{
-      cloudReady=!!s.val();
-      setCloud(cloudReady?"live":"down",
-        cloudReady?"เชื่อมต่อสด · อัปเดตอัตโนมัติ":"เน็ตหลุด · จะซิงก์ให้เมื่อกลับมาออนไลน์");
+      const now=!!s.val();
+      /* ไม่มีป้ายสถานะบนหน้าเว็บแล้ว จึงเตือนเป็นข้อความลอยเฉพาะตอนสถานะเปลี่ยนจริง */
+      if(seen&&now!==cloudReady&&IS_ADMIN)
+        toast(now?"เชื่อมต่อกลับมาแล้ว — กำลังซิงก์ผลขึ้นระบบ":"เน็ตหลุด — ผลจะถูกส่งขึ้นให้เองเมื่อกลับมาออนไลน์");
+      cloudReady=now; seen=true;
     });
     db.ref(ROOM+"/m").on("value",snap=>{
       const val=snap.val()||{};
@@ -652,8 +633,8 @@ function initCloud(){
         if(cloudEmpty&&localHas&&IS_ADMIN){ pushAll(); return; }   /* ดันข้อมูลเดิมขึ้นครั้งแรก */
       }
       applyCloud(val);
-    },()=>setCloud("down","อ่านข้อมูลไม่ได้ · ตรวจสอบ Rules ของฐานข้อมูล"));
-  }catch(e){ setCloud("off","เชื่อมต่อ Firebase ไม่สำเร็จ · ใช้โหมดออฟไลน์"); }
+    },()=>{ if(IS_ADMIN) toast("อ่านข้อมูลจากระบบไม่ได้ — ตรวจสอบ Rules ของฐานข้อมูล"); });
+  }catch(e){ db=null; }
 }
 function load(){
   let s="";
@@ -935,8 +916,6 @@ function toast(msg){const t=el("toast");t.textContent=msg;t.classList.add("show"
 window.addEventListener("hashchange",()=>{ const s=location.hash.slice(1); if(s!==encode()){decode(s);renderAll();} });
 
 /* ---- แถบเครื่องมือกรรมการ (ซ่อนทั้งแถบในโหมดผู้ชม) ---- */
-el("modeBadge").textContent=IS_ADMIN?"โหมดกรรมการ · บันทึกผลได้":"โหมดผู้ชม · ดูอย่างเดียว";
-el("modeBadge").className="modebadge "+(IS_ADMIN?"admin":"view");
 if(IS_ADMIN){
   el("adminBar").classList.remove("hidden");
   el("btnViewLink").onclick=()=>{
