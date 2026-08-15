@@ -49,6 +49,7 @@ header.hero::after{content:"";position:absolute;right:-70px;top:-70px;width:280p
 .hero-top{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between}
 .hero h1{margin:0;font-family:var(--f-dp);font-size:23px;font-weight:700;letter-spacing:-.01em}
 .titlebox{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.cloudwarn{margin-top:12px;background:rgba(248,113,113,.16);border:1px solid rgba(248,113,113,.5);color:#fee2e2;border-radius:10px;padding:9px 14px;font-size:12.5px;line-height:1.5}
 .adminbar{display:flex;align-items:center;gap:9px;margin-top:14px;padding-top:13px;border-top:1px solid rgba(255,255,255,.14);flex-wrap:wrap}
 .adminbar .ab-note{font-size:12px;color:#9fb6d4;margin-right:2px}
 .btn.ghost{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2);color:#e6eefb;font-size:12.5px;padding:6px 12px}
@@ -107,7 +108,6 @@ nav.tabs{background:var(--card);border-bottom:1px solid var(--line);position:sti
 .match:hover{border-color:#cfd6e4}
 .match.done{border-left-color:var(--win)}
 .match.draft{border-left-color:#f59e0b}
-.match.live{border-left-color:var(--live);box-shadow:0 0 0 3px rgba(220,38,38,.12),var(--shadow)}
 .match.dim{opacity:.32}
 .match.hit{background:#fffdf6}
 .mrow{padding:11px 15px;display:grid;grid-template-columns:100px 1fr 150px 1fr 108px;gap:12px;align-items:center;cursor:pointer}
@@ -119,8 +119,6 @@ nav.tabs{background:var(--card);border-bottom:1px solid var(--line);position:sti
 .tag.arena{background:#eef2ff;color:#3730a3}
 .tag.g{color:#fff}
 .tag.gA{background:var(--gA)}.tag.gB{background:var(--gB)}.tag.gC{background:var(--gC)}.tag.gD{background:var(--gD)}
-.tag.live{background:var(--live);color:#fff;animation:pulse 1.6s infinite}
-@keyframes pulse{50%{opacity:.5}}
 .side{display:flex;align-items:center;gap:10px;min-width:0}
 .side.a{justify-content:flex-end;text-align:right}
 .code{flex:none;width:33px;height:33px;border-radius:9px;display:grid;place-items:center;font-family:var(--f-dp);font-size:12.5px;font-weight:600;color:#fff;background:var(--ink-3);letter-spacing:.02em}
@@ -143,7 +141,6 @@ nav.tabs{background:var(--card);border-bottom:1px solid var(--line);position:sti
 .pill.wait{background:var(--loss-bg);color:#6b7280}
 .pill.done{background:var(--win-bg);color:var(--win)}
 .pill.drawp{background:var(--draw-bg);color:var(--draw)}
-.pill.live{background:#fee2e2;color:var(--live)}
 .pill.warn{background:#fef3c7;color:#92400e}
 .m-status .hint{font-size:10.5px;color:var(--ink-3)}
 
@@ -313,6 +310,7 @@ footer{padding:24px 0 40px;color:var(--ink-3);font-size:12.5px;text-align:center
         <div class="l" id="clockLabel">เวลาปัจจุบัน</div>
       </div>
     </div>
+    <div class="cloudwarn hidden" id="cloudWarn"></div>
     <div class="adminbar hidden" id="adminBar">
       <span class="ab-note">เครื่องมือสำหรับกรรมการ</span>
       <button class="btn ghost" id="btnViewLink">คัดลอกลิงก์สำหรับผู้ชม</button>
@@ -370,15 +368,22 @@ const IS_ADMIN=(()=>{ const m=/[?&]admin=([^&#]*)/.exec(location.search); return
    ถ้ายังไม่ได้ตั้งค่า (ปล่อยว่างไว้) เว็บจะทำงานได้ปกติแบบออฟไลน์
    คือเก็บผลไว้ในเบราว์เซอร์เครื่องเดียวเหมือนเวอร์ชันก่อนหน้า
    ===================================================================== */
-const FIREBASE_CONFIG = {
-    apiKey: "AIzaSyAwi3dWlGfv5H1Ju7YqwTULfzYw40OxBoY",
-    authDomain: "korat-robot-2026.firebaseapp.com",
-    databaseURL: "https://korat-robot-2026-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "korat-robot-2026",
-    storageBucket: "korat-robot-2026.firebasestorage.app",
-    messagingSenderId: "533121909806",
-    appId: "1:533121909806:web:7f3ee510e1d6414d480bbf"
-  };
+const FIREBASE_CONFIG={
+  apiKey:"AIzaSyAwi3dWlGfv5H1Ju7YqwTULfzYw40OxBoY",
+  authDomain:"korat-robot-2026.firebaseapp.com",
+  databaseURL:"https://korat-robot-2026-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"korat-robot-2026",
+  storageBucket:"korat-robot-2026.firebasestorage.app",
+  messagingSenderId:"533121909806",
+  appId:"1:533121909806:web:7f3ee510e1d6414d480bbf"
+};
+/* เผื่อวางโค้ดจากหน้า Firebase ทับลงมา (ของ Google ใช้ชื่อ firebaseConfig ตัวเล็ก)
+   ระบบจะหยิบอันไหนก็ได้ที่มี databaseURL ครบ */
+function cloudConfig(){
+  try{ if(FIREBASE_CONFIG&&FIREBASE_CONFIG.databaseURL) return FIREBASE_CONFIG; }catch(e){}
+  try{ if(typeof firebaseConfig!=="undefined"&&firebaseConfig&&firebaseConfig.databaseURL) return firebaseConfig; }catch(e){}
+  return null;
+}
 const ROOM="korat2026";    /* เปลี่ยนชื่อห้องได้ ถ้าอยากเริ่มข้อมูลชุดใหม่ */
 
 /* =====================================================================
@@ -455,7 +460,7 @@ const FIELDS=["L","M","S","SS","X","pen","edit","ff"];
 const blankTeam=()=>({L:0,M:0,S:0,SS:0,X:0,pen:0,edit:0,ff:0});
 const blankMatch=()=>({a:blankTeam(),b:blankTeam(),pick:null,entered:false});
 const results={}; MATCHES.forEach(m=>results[m.no]=blankMatch());
-const filters={round:"all",arena:"all",q:"",live:true};   /* ตัวกรองถูกซ่อน — แสดงทุกแมตช์ ไฮไลต์สดเสมอ */
+const filters={round:"all",arena:"all",q:""};   /* ตัวกรองถูกซ่อน — แสดงทุกแมตช์ */
 const open=new Set();
 
 /* ---- คะแนนภารกิจ ---- */
@@ -611,10 +616,17 @@ function applyCloud(val){
   });
   if(changed){ renderAll(); if(IS_ADMIN){ try{localStorage.setItem(KEY,encode());}catch(e){} } }
 }
+function warn(msg){                       /* แถบเตือนสีแดง เห็นเฉพาะเครื่องกรรมการ และขึ้นเฉพาะตอนมีปัญหา */
+  if(!IS_ADMIN) return;
+  const e=el("cloudWarn"); if(!e) return;
+  e.textContent=msg; e.classList.remove("hidden");
+}
 function initCloud(){
-  if(!FIREBASE_CONFIG.databaseURL||typeof firebase==="undefined") return;   /* ไม่ได้ตั้งค่า = ใช้โหมดออฟไลน์ */
+  const cfg=cloudConfig();
+  if(!cfg){ warn("⚠ ยังไม่ได้ตั้งค่า Firebase — ผลจะเก็บอยู่ในเครื่องนี้เท่านั้น เครื่องอื่นจะไม่เห็น"); return; }
+  if(typeof firebase==="undefined"){ warn("⚠ โหลดตัวเชื่อม Firebase ไม่ได้ — ตรวจสอบอินเทอร์เน็ต แล้วรีเฟรชหน้า"); return; }
   try{
-    firebase.initializeApp(FIREBASE_CONFIG);
+    firebase.initializeApp(cfg);
     db=firebase.database();
     let seen=false;
     db.ref(".info/connected").on("value",s=>{
@@ -623,7 +635,10 @@ function initCloud(){
       if(seen&&now!==cloudReady&&IS_ADMIN)
         toast(now?"เชื่อมต่อกลับมาแล้ว — กำลังซิงก์ผลขึ้นระบบ":"เน็ตหลุด — ผลจะถูกส่งขึ้นให้เองเมื่อกลับมาออนไลน์");
       cloudReady=now; seen=true;
+      if(now) el("cloudWarn").classList.add("hidden");
+      else if(seen) warn("⚠ เน็ตหลุด — ผลจะถูกส่งขึ้นให้เองเมื่อกลับมาออนไลน์");
     });
+    setTimeout(()=>{ if(!cloudReady) warn("⚠ เชื่อมต่อฐานข้อมูลไม่สำเร็จ — ตรวจสอบอินเทอร์เน็ต และ Rules ของ Realtime Database"); },8000);
     db.ref(ROOM+"/m").on("value",snap=>{
       const val=snap.val()||{};
       if(firstSnap){
@@ -633,8 +648,8 @@ function initCloud(){
         if(cloudEmpty&&localHas&&IS_ADMIN){ pushAll(); return; }   /* ดันข้อมูลเดิมขึ้นครั้งแรก */
       }
       applyCloud(val);
-    },()=>{ if(IS_ADMIN) toast("อ่านข้อมูลจากระบบไม่ได้ — ตรวจสอบ Rules ของฐานข้อมูล"); });
-  }catch(e){ db=null; }
+    },()=>warn("⚠ อ่านข้อมูลไม่ได้ — Rules ของ Realtime Database ยังไม่อนุญาต (.read / .write ต้องเป็น true)"));
+  }catch(e){ db=null; warn("⚠ เชื่อมต่อ Firebase ไม่สำเร็จ: "+(e&&e.message||e)); }
 }
 function load(){
   let s="";
@@ -648,10 +663,6 @@ function load(){
    ===================================================================== */
 const el=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-function parseSlot(t){const [s,e]=t.split(" - ");const f=x=>{const[h,m]=x.split(".");return +h*60+ +m;};return [f(s),f(e)];}
-function liveNo(){ if(!filters.live) return null;
-  const d=new Date(), n=d.getHours()*60+d.getMinutes();
-  const m=MATCHES.find(m=>{const[s,e]=parseSlot(m.time);return n>=s&&n<e;}); return m?m.no:null; }
 
 function tieHTML(m){
   const r=results[m.no], o=outcome(m);
@@ -698,19 +709,18 @@ function sheetHTML(m){
     '<div data-calc="tie">'+tieHTML(m)+'</div>'+foot+'</div>';
 }
 
-function matchClass(m,live){
+function matchClass(m){
   const r=results[m.no], A=resolve(m.a), B=resolve(m.b);
   const touched=FIELDS.some(f=>r.a[f]||r.b[f]);
   const cls=["match"];
   if(r.entered) cls.push("done"); else if(touched) cls.push("draft");
-  if(live===m.no) cls.push("live");
   if(filters.q){
     const hay=(A.name+B.name+(A.code||"")+(B.code||"")).toLowerCase();
     cls.push(hay.includes(filters.q)?"hit":"dim");
   }
   return cls.join(" ");
 }
-function mrowHTML(m,live){
+function mrowHTML(m){
   const r=results[m.no], o=outcome(m), A=resolve(m.a), B=resolve(m.b);
   const locked=!A.code||!B.code;
   const touched=FIELDS.some(f=>r.a[f]||r.b[f]);
@@ -736,7 +746,6 @@ function mrowHTML(m,live){
   else if(r.entered&&o.draw) pill='<span class="pill drawp">เสมอ 1–1</span>';
   else if(r.entered) pill='<span class="pill done">ยืนยันแล้ว</span>';
   else if(touched) pill='<span class="pill warn">ร่าง ยังไม่ยืนยัน</span>';
-  else if(live===m.no) pill='<span class="pill live">กำลังแข่ง</span>';
   else if(locked) pill='<span class="pill wait">รอสายคู่</span>';
   else pill='<span class="pill wait">รอแข่ง</span>';
   if(!locked) hint='<span class="hint">'+(open.has(m.no)?"▲ ปิดใบคะแนน":(IS_ADMIN?"▼ ลงคะแนน":"▼ ดูใบคะแนน"))+'</span>';
@@ -745,7 +754,6 @@ function mrowHTML(m,live){
   if(m.g) tags.push('<span class="tag g g'+m.g+'">กลุ่ม '+m.g+'</span>');
   if(m.tag) tags.push('<span class="tag g g'+(m.round==="final"?"D":"A")+'">'+m.tag+'</span>');
   tags.push('<span class="tag arena">สนาม '+m.arena+'</span>');
-  if(live===m.no) tags.push('<span class="tag live">LIVE</span>');
 
   return '<div class="mrow" data-toggle="'+m.no+'">'+
       '<div class="m-meta"><div class="m-no">MATCH '+m.no+'</div><div class="m-time">'+m.time.replace(" - ","–")+'</div><div class="m-tags">'+tags.join("")+'</div></div>'+
@@ -755,10 +763,10 @@ function mrowHTML(m,live){
       '<div class="m-status">'+pill+hint+'</div>'+
     '</div>';
 }
-function matchHTML(m,live){
+function matchHTML(m){
   const A=resolve(m.a), B=resolve(m.b), locked=!A.code||!B.code;
-  return '<div class="'+matchClass(m,live)+'" data-match="'+m.no+'">'+
-    mrowHTML(m,live)+
+  return '<div class="'+matchClass(m)+'" data-match="'+m.no+'">'+
+    mrowHTML(m)+
     (open.has(m.no)&&!locked?sheetHTML(m):"")+
   '</div>';
 }
@@ -767,10 +775,9 @@ function refreshMatch(no){
   const m=MATCHES.find(x=>x.no===no);
   const wrap=document.querySelector('.match[data-match="'+no+'"]');
   if(!m||!wrap) return;
-  const live=liveNo();
-  wrap.className=matchClass(m,live);
+  wrap.className=matchClass(m);
   const row=wrap.querySelector(".mrow");
-  if(row) row.outerHTML=mrowHTML(m,live);
+  if(row) row.outerHTML=mrowHTML(m);
   const q=s=>wrap.querySelector('[data-calc="'+s+'"]');
   const set=(s,v)=>{const n=q(s); if(n) n.textContent=v;};
   set("raw-a",rawScore(m,"a")); set("raw-b",rawScore(m,"b"));
@@ -779,7 +786,7 @@ function refreshMatch(no){
 }
 
 function renderSchedule(){
-  const live=liveNo(); let html="";
+  let html="";
   ["group","qf","sf","final"].forEach(rd=>{
     if(filters.round!=="all"&&filters.round!==rd) return;
     let ms=MATCHES.filter(m=>m.round===rd);
@@ -787,7 +794,7 @@ function renderSchedule(){
     if(!ms.length) return;
     const cfg=RULES[rd];
     html+='<div class="round-head"><h2>'+cfg.th+'</h2><span class="en">'+cfg.en+'</span><div class="rule"></div></div>'+
-      '<div class="matches">'+ms.map(m=>matchHTML(m,live)).join("")+'</div>';
+      '<div class="matches">'+ms.map(m=>matchHTML(m)).join("")+'</div>';
   });
   el("matchList").innerHTML=html||'<div class="empty">ไม่มีแมตช์ที่ตรงกับตัวกรอง</div>';
 }
@@ -939,13 +946,10 @@ if(IS_ADMIN){
   };
 }
 
-let lastLive="x";
+
 function tick(){
   const d=new Date();
   el("clock").textContent=String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
-  const l=liveNo();
-  el("clockLabel").textContent=l?"กำลังแข่ง Match "+l:"เวลาปัจจุบัน";
-  if(l!==lastLive){lastLive=l;renderSchedule();}
 }
 setInterval(tick,15000);
 
