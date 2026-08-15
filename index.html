@@ -806,16 +806,16 @@ function renderStandings(){
     html+='<div class="panel"><div class="panel-head"><span class="dot" style="background:var(--g'+g+')"></span><h3>กลุ่ม '+g+'</h3>'+
       '<span class="note">'+GROUPS[g].length+' ทีม · '+(complete?"จบรอบแล้ว":"ยังแข่งไม่ครบ")+'</span></div>'+
       '<div class="tscroll"><table class="st"><thead><tr><th class="rank">#</th><th class="left">ทีม</th><th>แข่ง</th><th>ชนะ</th><th>เสมอ</th><th>แพ้</th>'+
-      '<th class="sep det">เล็ก</th><th class="det">กลาง</th><th class="det">ใหญ่</th><th class="tot">รวม</th><th class="det">แก้ไข</th><th class="sep">คะแนน</th></tr></thead><tbody>';
+      '<th class="sep det">เล็ก</th><th class="det">กลาง</th><th class="det">ใหญ่</th><th class="tot">รวม</th><th class="sep">คะแนน</th></tr></thead><tbody>';
     list.forEach((r,i)=>{
       const q=i<2;
       html+='<tr'+(q?' class="qual"':"")+'><td class="rank'+(q?" q":"")+'">'+(i+1)+'</td>'+
         '<td class="left"><div class="tname"><span class="mini" style="background:var(--g'+g+')">'+r.c+'</span><span>'+esc(TEAMS[r.c])+'</span></div></td>'+
         '<td>'+r.p+'</td><td>'+r.w+'</td><td>'+r.d+'</td><td>'+r.l+'</td>'+
-        '<td class="sep det">'+r.ptS+'</td><td class="det">'+r.ptM+'</td><td class="det">'+r.ptL+'</td><td class="tot"><b>'+r.tot+'</b></td><td class="det">'+r.edit+'</td>'+
+        '<td class="sep det">'+r.ptS+'</td><td class="det">'+r.ptM+'</td><td class="det">'+r.ptL+'</td><td class="tot"><b>'+r.tot+'</b></td>'+
         '<td class="sep pts">'+r.mp+'</td></tr>';
     });
-    html+='</tbody></table></div><div class="scrollhint">คอลัมน์คะแนนแยกขนาดชิ้นงาน (เล็ก / กลาง / ใหญ่) และจำนวนครั้งแก้ไขโปรแกรม ดูได้บนจอที่กว้างกว่านี้</div></div>';
+    html+='</tbody></table></div><div class="scrollhint">คอลัมน์คะแนนแยกขนาดชิ้นงาน (เล็ก / กลาง / ใหญ่) ดูได้บนจอที่กว้างกว่านี้</div></div>';
   });
   el("standingsWrap").innerHTML=html;
 }
