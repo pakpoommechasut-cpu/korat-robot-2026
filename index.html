@@ -163,6 +163,8 @@ nav.tabs{background:var(--card);border-bottom:1px solid var(--line);position:sti
 .cnt.pen:focus{border-color:#dc2626;box-shadow:0 0 0 3px rgba(220,38,38,.1)}
 .cnt:disabled{background:#f3f4f6;color:#9ca3af;border-color:#eceff4;cursor:not-allowed}
 .locknote{background:#eef6ff;border:1px solid #bfdbfe;color:#1e40af;border-radius:9px;padding:7px 12px;font-size:12.5px;margin-bottom:10px}
+.roundnote{background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:9px;padding:7px 12px;font-size:12.5px;margin-bottom:10px}
+.roundnote b{font-weight:700}
 .ffbox{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-2);cursor:pointer}
 .sheet-foot{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:11px}
 .sheet-foot .note{font-size:12px;color:var(--ink-3);flex:1;min-width:180px}
@@ -447,9 +449,9 @@ const RULES={
    info:"ชิ้นงานแดง–เขียว–ฟ้า · วงล้อหมุนทุก 1.00 นาที",
    tie:[{k:"SS",dir:-1,lb:"ชิ้นงานเล็กมากมากกว่า"},{k:"S",dir:-1,lb:"ชิ้นงานเล็กมากกว่า"},{k:"edit",dir:1,lb:"แก้ไขโปรแกรมน้อยกว่า"}]},
  final:{th:"รอบชิงชนะเลิศ",en:"Grand Final",
-   sizes:[{k:"M",label:"กลาง (Medium)",w:1},{k:"S",label:"เล็ก (Small)",w:3},{k:"SS",label:"เล็กมาก (Super Small)",w:8}],
-   wrong:true, formula:"S = (1×nM) + (3×nS) + (8×nSS)  เฉพาะที่วางถูกถาดสี",
-   info:"ต้องแยกสีชิ้นงานลงถาดแดง–เหลือง–ฟ้า · วางผิดสีไม่ได้คะแนนและไม่ถูกหัก",
+   sizes:[{k:"L",label:"ใหญ่ (Large)",w:1},{k:"M",label:"กลาง (Medium)",w:2},{k:"S",label:"เล็ก (Small)",w:3},{k:"SS",label:"เล็กมาก (Super Small)",w:4}],
+   wrong:true, formula:"S = (1×nL) + (2×nM) + (3×nS) + (4×nSS)  เฉพาะที่วางถูกถาดสี",
+   info:"ต้องแยกสีชิ้นงานลงถาด 4 สี แดง–เหลือง–เขียว–ฟ้า · วางผิดสีไม่ได้คะแนนและไม่ถูกหัก",
    tie:[{k:"X",dir:1,lb:"วางผิดสีน้อยกว่า"},{k:"SS",dir:-1,lb:"ชิ้นงานเล็กมากถูกสีมากกว่า"},{k:"S",dir:-1,lb:"ชิ้นงานเล็กถูกสีมากกว่า"},{k:"edit",dir:1,lb:"แก้ไขโปรแกรมน้อยกว่า"}]}
 };
 const FIELDS=["L","M","S","SS","X","pen","edit","ff"];
@@ -688,13 +690,15 @@ function sheetHTML(m){
   cfg.sizes.forEach(z=>{
     rows+='<tr><td>'+z.label+'<span class="wbadge">×'+z.w+'</span></td><td>'+num("a",z.k)+'</td><td>'+num("b",z.k)+'</td></tr>';
   });
-  if(cfg.wrong) rows+='<tr><td>วางผิดถาดสี <span class="wbadge" style="background:#fee2e2;color:#b91c1c">0 คะแนน</span></td><td>'+num("a","X")+'</td><td>'+num("b","X")+'</td></tr>';
+  if(cfg.wrong) rows+='<tr><td>วางผิดถาดสี (รวมทุกขนาด) <span class="wbadge" style="background:#fee2e2;color:#b91c1c">0 คะแนน</span></td><td>'+num("a","X")+'</td><td>'+num("b","X")+'</td></tr>';
   rows+='<tr class="sum"><td>คะแนนภารกิจ (S)</td><td data-calc="raw-a">'+rawScore(m,"a")+'</td><td data-calc="raw-b">'+rawScore(m,"b")+'</td></tr>';
   rows+='<tr class="net"><td>คะแนนภารกิจสุทธิ</td><td data-calc="net-a">'+netScore(m,"a")+'</td><td data-calc="net-b">'+netScore(m,"b")+'</td></tr>';
   rows+='<tr><td>แก้ไขโปรแกรม (ครั้ง)</td><td>'+num("a","edit")+'</td><td>'+num("b","edit")+'</td></tr>';
   const ff=s=>'<label class="ffbox"><input type="checkbox" data-m="'+m.no+'" data-side="'+s+'" data-k="ff"'+(r[s].ff?" checked":"")+lock+'> ปรับแพ้</label>';
   rows+='<tr><td>ปรับแพ้ในแมตช์ (Match Forfeit)</td><td>'+ff("a")+'</td><td>'+ff("b")+'</td></tr>';
 
+  const colornote = cfg.wrong
+    ? '<div class="roundnote">นับเฉพาะชิ้นงานที่ <b>วางถูกถาดสี</b> — ถาดมี 4 สี แดง / เหลือง / เขียว / ฟ้า</div>' : "";
   const head = !IS_ADMIN
     ? '<div class="viewnote">โหมดผู้ชม — ดูผลได้อย่างเดียว ไม่สามารถแก้ไขคะแนนได้</div>'
     : (r.entered?'<div class="locknote">ผลนี้ยืนยันแล้ว — กด <b>แก้ไขผล</b> ก่อนจึงจะพิมพ์แก้ได้</div>':"");
@@ -704,7 +708,7 @@ function sheetHTML(m){
         ? '<button class="btn" data-unenter="'+m.no+'">แก้ไขผล</button><button class="btn danger" data-clear="'+m.no+'">ล้างแมตช์นี้</button>'
         : '<button class="btn primary" data-enter="'+m.no+'">ยืนยันผลแมตช์นี้</button><button class="btn danger" data-clear="'+m.no+'">ล้างแมตช์นี้</button>')+
     '</div>';
-  return '<div class="sheet-wrap">'+head+
+  return '<div class="sheet-wrap">'+head+colornote+
     '<table class="sheet"><thead><tr><th>รายการ</th><th>'+esc(A.name)+'</th><th>'+esc(B.name)+'</th></tr></thead><tbody>'+rows+'</tbody></table>'+
     '<div data-calc="tie">'+tieHTML(m)+'</div>'+foot+'</div>';
 }
